@@ -1,0 +1,4 @@
+dnspython
+webob
+git+https://git@github.com/openstack/neutron.git
+git+https://git@github.com/roaet/wafflehaus.git@development
