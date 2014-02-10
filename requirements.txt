@@ -1,4 +1,4 @@
 dnspython
 webob
-git+https://git@github.com/openstack/neutron.git
-git+https://git@github.com/roaet/wafflehaus.git@development
+git+https://github.com/openstack/neutron.git
+git+https://github.com/roaet/wafflehaus.git@development
