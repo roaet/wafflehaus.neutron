@@ -16,6 +16,8 @@
 import json
 import logging
 import netaddr
+import webob.dec
+import webob.exc
 
 
 def response_headers(content_length):
@@ -54,10 +56,9 @@ class LastIpCheck(object):
         self.log = logging.getLogger(conf.get('log_name', __name__))
         self.log.info('Starting wafflehaus last_ip_check middleware')
 
-    def _prep_url(self, url, start_response):
+    def _prep_url(self, url):
         if url is None:
             self.log.error('Url info is empty')
-            raise Error500()
         url_parts = url.split('/')
         if len(url_parts) < 3:
             return False
@@ -65,35 +66,28 @@ class LastIpCheck(object):
         self.port = url_parts[2]
         return True
 
-    def _check_basics(self, env, start_response):
-        method = env.get('REQUEST_METHOD')
-        if method is None:
-            self.log.error('Request method is unknown')
-            raise Error500()
+    def _check_basics(self, req):
+        if req.content_length == 0:
+            return False
 
-        if(not self._prep_url(env.get('PATH_INFO'), start_response) or
+        method = req.method
+        if(not self._prep_url(req.path) or
                 method not in ['PUT', 'DELETE'] or
                 self.resource != 'ports'):
             return False
         return True
 
-    def _should_run(self, env, start_response):
-        if not self._check_basics(env, start_response):
-            return False
-        body = ''
-        try:
-            length = int(env.get('CONTENT_LENGTH', '0'))
-        except ValueError:
-            length = 0
-        if length == 0:
-            return False
-        if length != 0:
-            body = env['wsgi.input'].read(length)
+    def _should_run(self, req):
+        basic_check = self._check_basics(req)
+        if isinstance(basic_check, webob.exc.HTTPException) or not basic_check:
+            self.log.info("Failed basic checks with: " + str(basic_check))
+            return basic_check
+        body = req.body
         try:
             body_json = json.loads(body)
         except ValueError:
-            self.log.error("Cowardly not failing on weird json")
-            return False
+            return webob.exc.HTTPBadRequest
+        self.log.info(str(body_json))
         port_info = body_json.get('port')
         if port_info is None:
             return False
@@ -103,34 +97,32 @@ class LastIpCheck(object):
         self.fixed_ips = fixed_ips
         return True
 
-    def _is_last_ip(self, env, start_response):
+    def _is_last_ip(self, req):
         if len(self.fixed_ips) == 0:
-            raise Error403()
+            return webob.exc.HTTPForbidden()
         for fixed_ip in self.fixed_ips:
             if 'ip_address' not in fixed_ip:
                 #TODO(jlh): need to add the DB connection to do this
                 subnet_id = fixed_ip.get('subnet_id')
                 if subnet_id == "ipv4":
                     """If adding to ipv4 subnet, we're good"""
-                    return
+                    return self.app
             else:
                 ip_str = fixed_ip.get('ip_address')
                 ip = netaddr.IPAddress(ip_str)
                 if ip.version == 4:
                     """If there is an ipv4 there, we're good"""
-                    return
-        raise Error403()
+                    return self.app
+        return webob.exc.HTTPForbidden()
 
-    def __call__(self, env, start_response):
-        try:
-            if not self._should_run(env, start_response):
-                return self.app(env, start_response)
-            self._is_last_ip(env, start_response)
-            return self.app(env, start_response)
-        except Error500:
-            return do_500(start_response)
-        except Error403:
-            return do_403(start_response)
+    @webob.dec.wsgify
+    def __call__(self, req):
+        res = self._should_run(req)
+        if isinstance(res, webob.exc.HTTPException):
+            return res
+        if not res:
+            return self.app
+        return self._is_last_ip(req)
 
 
 def filter_factory(global_conf, **local_conf):
