@@ -75,115 +75,84 @@ class TestLastIpCheck(test_base.TestBase):
         self.assertTrue(callable(checker))
 
     def test_call_no_method(self):
-        env = {
-            'PATH_INFO': '/port/12345',
-        }
-        self.checker(env, self.start_response)
-        self.assertEqual(self.start_response.call_count, 1)
+        resp = self.checker.__call__.request('/test/1234', body=None)
+        self.assertEqual(self.app, resp)
 
     def test_call_incorrect_route(self):
-        env = {
-            'PATH_INFO': '/test',
-            'REQUEST_METHOD': 'PUT',
-        }
-        self.assertEqual(self.return_value,
-                         self.checker(env, self.start_response))
-        self.assertEqual(self.start_response.call_count, 0)
-
-    def _create_env(self, method, body):
-        fake_file = mock.Mock()
-        fake_file.read = mock.Mock()
-        fake_file.read.return_value = body
-        env = {
-            'PATH_INFO': '/ports/12345',
-            'REQUEST_METHOD': 'PUT',
-            'wsgi.input': fake_file,
-            'CONTENT_LENGTH': len(body),
-        }
-        return env
+        resp = self.checker.__call__.request('/test/1234', method='PUT',
+                                             body=None)
+        self.assertEqual(self.app, resp)
 
     def test_call_no_body(self):
-        env = self._create_env('PUT', '')
-        with patch.object(last_ip_check.LastIpCheck, '_is_last_ip',
-                          return_value=None) as mock_method:
-            self.assertEqual(self.return_value,
-                             self.checker(env, self.start_response))
-            self.assertEqual(self.start_response.call_count, 0)
-            self.assertEqual(mock_method.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=None)
+        self.assertEqual(self.app, resp)
 
     def test_call_no_fixed_ips(self):
-        env = self._create_env('PUT', self.bad_no_fixed)
-        with patch.object(last_ip_check.LastIpCheck, '_is_last_ip',
-                          return_value=None) as mock_method:
-            self.assertEqual(self.return_value,
-                             self.checker(env, self.start_response))
-            self.assertEqual(self.start_response.call_count, 0)
-            self.assertEqual(mock_method.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.bad_no_fixed)
+        self.assertEqual(self.app, resp)
 
     def test_call_not_ports(self):
-        env = self._create_env('PUT', self.bad_resource)
-        with patch.object(last_ip_check.LastIpCheck, '_is_last_ip',
-                          return_value=None) as mock_method:
-            self.assertEqual(self.return_value,
-                             self.checker(env, self.start_response))
-            self.assertEqual(self.start_response.call_count, 0)
-            self.assertEqual(mock_method.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.bad_resource)
+        self.assertEqual(self.app, resp)
 
     def test_call_correct_body(self):
-        env = self._create_env('PUT', self.good_empty)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 1)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_empty)
+        self.assertEqual(403, resp.status_code)
 
     def test_only_v6(self):
         """This situation occurs if any ip was removed and ipv6 is left."""
-        env = self._create_env('PUT', self.good_only_v6)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 1)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_only_v6)
+        self.assertEqual(403, resp.status_code)
 
     def test_add_v4(self):
         """This situation occurs when a user is adding an ipv4 to an empty
         list.
         """
-        env = self._create_env('PUT', self.good_add_v4)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v4)
+        self.assertEqual(self.app, resp)
 
     def test_add_v6(self):
         """This situation occurs when a user is adding an ipv6 to an empty
         list.
         """
-        env = self._create_env('PUT', self.good_add_v6)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 1)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v6)
+        self.assertEqual(403, resp.status_code)
 
     def test_add_v6_w4(self):
         """This situation occurs when a user is adding an ipv6 to a list of
         other ipv4s.
         """
-        env = self._create_env('PUT', self.good_add_v6_w4)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v6_w4)
+        self.assertEqual(self.app, resp)
 
     def test_add_v4_w4(self):
         """This situation occurs when a user is adding an ipv4 to a list of
         other ipv4s.
         """
-        env = self._create_env('PUT', self.good_add_v4_w4)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v4_w4)
+        self.assertEqual(self.app, resp)
 
     def test_add_v4_w6(self):
         """This situation occurs when a user is adding an ipv4 to a list of
         other ipv6s.
         """
-        env = self._create_env('PUT', self.good_add_v4_w6)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 0)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v4_w6)
+        self.assertEqual(self.app, resp)
 
     def test_add_v6_w6(self):
         """This situation occurs when a user is adding an ipv6 to a list of
         other ipv6s.
         """
-        env = self._create_env('PUT', self.good_add_v6_w6)
-        self.checker(env, self.start_response)
-        self.assertEquals(self.start_response.call_count, 1)
+        resp = self.checker.__call__.request('/ports/1234', method='PUT',
+                                             body=self.good_add_v6_w6)
+        self.assertEqual(403, resp.status_code)
