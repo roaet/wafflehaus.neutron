@@ -12,12 +12,5 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-#import mock
-#from neutron import wsgi
-#from wafflehaus import rolerouter
-from wafflehaus_neutron.tests import test_base
 
-
-class TestIpPolicyFilter(test_base.TestBase):
-    def test_x(self):
-        pass
+__import__('pkg_resources').declare_namespace(__name__)

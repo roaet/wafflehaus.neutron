@@ -19,7 +19,7 @@ import setuptools
 version = '0.1'
 
 setuptools.setup(
-    name='wafflehaus_neutron',
+    name='wafflehaus.neutron',
     version=version,
     description="A collection of middleware for openstack neutron",
     classifiers=[
@@ -37,13 +37,14 @@ setuptools.setup(
     keywords=['openstack'],
     author='Justin Hammond',
     author_email='justin.hammond@rackspace.com',
-    url='https://github.com/roaet/wafflehaus-neutron',
+    url='https://github.com/roaet/wafflehaus.neutron',
     license='Apache Software License',
-    packages=['wafflehaus_neutron'],
+    packages=setuptools.find_packages(exclude=['tests']),
     long_description=open('README.md').read(),
     zip_safe=False,
     install_requires=[
       "webob",
       "dnspython",
     ],
+    namespace_packages=['wafflehaus'],
 )
