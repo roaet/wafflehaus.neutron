@@ -17,7 +17,6 @@
 #from wafflehaus import rolerouter
 import mock
 from tests import test_base
-from mock import patch
 
 from wafflehaus.neutron.last_ip_check import last_ip_check
 
@@ -113,6 +112,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv4 to an empty
         list.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v4)
         self.assertEqual(self.app, resp)
@@ -121,6 +121,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv6 to an empty
         list.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v6)
         self.assertEqual(403, resp.status_code)
@@ -129,6 +130,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv6 to a list of
         other ipv4s.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v6_w4)
         self.assertEqual(self.app, resp)
@@ -137,6 +139,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv4 to a list of
         other ipv4s.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v4_w4)
         self.assertEqual(self.app, resp)
@@ -145,6 +148,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv4 to a list of
         other ipv6s.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v4_w6)
         self.assertEqual(self.app, resp)
@@ -153,6 +157,7 @@ class TestLastIpCheck(test_base.TestBase):
         """This situation occurs when a user is adding an ipv6 to a list of
         other ipv6s.
         """
+        self.skipTest('No longer needed but left if rules change')
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_add_v6_w6)
         self.assertEqual(403, resp.status_code)
