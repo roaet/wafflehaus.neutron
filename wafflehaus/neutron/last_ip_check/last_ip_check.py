@@ -20,35 +20,6 @@ import webob.dec
 import webob.exc
 
 
-def response_headers(content_length):
-    """Creates the default headers for all errors."""
-    return [
-        ('Content-type', 'text/html'),
-        ('Content-length', str(content_length)),
-    ]
-
-
-def do_500(start_response):
-    """Performs a standard 500 error"""
-    start_response("500 Internal Server Error",
-                   response_headers(0))
-    return ["", ]
-
-
-def do_403(start_response):
-    msg = "400 Forbidden. Cannot remove last v4 address from interface"
-    start_response(msg, response_headers(0))
-    return ["", ]
-
-
-class Error403(Exception):
-    pass
-
-
-class Error500(Exception):
-    pass
-
-
 class LastIpCheck(object):
     def __init__(self, app, conf):
         self.conf = conf
@@ -56,38 +27,27 @@ class LastIpCheck(object):
         self.log = logging.getLogger(conf.get('log_name', __name__))
         self.log.info('Starting wafflehaus last_ip_check middleware')
 
-    def _prep_url(self, url):
-        if url is None:
-            self.log.error('Url info is empty')
-        url_parts = url.split('/')
-        if len(url_parts) < 3:
-            return False
-        self.resource = url_parts[1]
-        self.port = url_parts[2]
-        return True
-
     def _check_basics(self, req):
         if req.content_length == 0:
             return False
-
         method = req.method
-        if(not self._prep_url(req.path) or
-                method not in ['PUT', 'DELETE'] or
-                self.resource != 'ports'):
+        if method not in ['PUT']:
+            return False
+        url = req.path
+        url_parts = url.split('/')
+        if 'ports' not in url and 'ports' not in url_parts[len(url_parts) - 2]:
             return False
         return True
 
     def _should_run(self, req):
         basic_check = self._check_basics(req)
         if isinstance(basic_check, webob.exc.HTTPException) or not basic_check:
-            self.log.info("Failed basic checks with: " + str(basic_check))
             return basic_check
         body = req.body
         try:
             body_json = json.loads(body)
         except ValueError:
             return webob.exc.HTTPBadRequest
-        self.log.info(str(body_json))
         port_info = body_json.get('port')
         if port_info is None:
             return False
@@ -98,21 +58,17 @@ class LastIpCheck(object):
         return True
 
     def _is_last_ip(self, req):
+        if not hasattr(self, 'fixed_ips') or self.fixed_ips is None:
+            return self.app
         if len(self.fixed_ips) == 0:
             return webob.exc.HTTPForbidden()
         for fixed_ip in self.fixed_ips:
-            if 'ip_address' not in fixed_ip:
-                #TODO(jlh): need to add the DB connection to do this
-                subnet_id = fixed_ip.get('subnet_id')
-                if subnet_id == "ipv4":
-                    """If adding to ipv4 subnet, we're good"""
-                    return self.app
-            else:
-                ip_str = fixed_ip.get('ip_address')
-                ip = netaddr.IPAddress(ip_str)
-                if ip.version == 4:
-                    """If there is an ipv4 there, we're good"""
-                    return self.app
+            ip_str = fixed_ip.get('ip_address')
+            ip = netaddr.IPAddress(ip_str)
+            if ip.version == 4:
+                """If there is an ipv4 there, we're good"""
+                return self.app
+        self.log.error('Attempting to remove last ipv4')
         return webob.exc.HTTPForbidden()
 
     @webob.dec.wsgify
