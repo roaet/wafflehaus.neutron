@@ -20,18 +20,56 @@ from tests import test_base
 from wafflehaus.neutron.ip_policy import create_default
 
 class DefaultPolicyTestBase(test_base.TestBase):
-    def _get_allocation_pools_from_body(self, body):
-        body_json = json.loads(body)
-        print(body_json)
-        allocation_pools = body_json["subnets"][0]["allocation_pools"]
-        return allocation_pools
-
-class TestDefaultIPV4Policy(DefaultPolicyTestBase):
     def setUp(self):
         self.app = mock.Mock()
 
         self.default_mock = mock.Mock()
         self.mod_mock = mock.Mock()
+
+    def _get_allocation_pools_from_body(self, body):
+        body_json = json.loads(body)
+        print(body_json)
+        allocation_pools = body_json["subnets"][0]["allocation_pools"]
+        return allocation_pools
+    
+    def test_default_instance_create(self):
+        result = create_default.filter_factory({})(self.app)
+        self.assertIsNotNone(result)
+        resp = result.__call__.request('/', method='GET')
+        self.assertEqual(resp, self.app)
+
+    def test_matched_configured(self):
+        conf = {'resource': 'POST /derp'}
+        result = create_default.filter_factory(conf)(self.app)
+        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
+        with patch(pkg + '._filter_policy', self.default_mock) as mock:
+            result.__call__.request('/derp', method='POST')
+            self.assertTrue(mock.called)
+
+    def test_matched_default(self):
+        result = create_default.filter_factory({})(self.app)
+        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
+        with patch(pkg + '._filter_policy', self.default_mock) as mock:
+            result.__call__.request('/v2.0/subnets', method='POST')
+            self.assertTrue(mock.called)
+
+    def test_not_matched_default(self):
+        result = create_default.filter_factory({})(self.app)
+        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
+        with patch(pkg + '._filter_policy', self.default_mock) as mock:
+            result.__call__.request('/v2.0/subnets', method='GET')
+            self.assertFalse(mock.called)
+
+    def test_not_matched(self):
+        result = create_default.filter_factory({})(self.app)
+        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
+        with patch(pkg + '._filter_policy', self.default_mock) as mock:
+            result.__call__.request('/testing', method='POST')
+            self.assertFalse(mock.called)
+
+class TestDefaultIPV4Policy(DefaultPolicyTestBase):
+    def setUp(self):
+        super(TestDefaultIPV4Policy, self).setUp()
 
         self.v4_no_alloc = ('{ "subnets":[' +
                             '{' +
@@ -77,40 +115,6 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
                             '}' +
                             '] }')
 
-    def test_default_instance_create(self):
-        result = create_default.filter_factory({})(self.app)
-        self.assertIsNotNone(result)
-        resp = result.__call__.request('/', method='GET')
-        self.assertEqual(resp, self.app)
-
-    def test_matched_configured(self):
-        conf = {'resource': 'POST /derp'}
-        result = create_default.filter_factory(conf)(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/derp', method='POST')
-            self.assertTrue(mock.called)
-
-    def test_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/v2.0/subnets', method='POST')
-            self.assertTrue(mock.called)
-
-    def test_not_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/v2.0/subnets', method='GET')
-            self.assertFalse(mock.called)
-
-    def test_not_matched(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/testing', method='POST')
-            self.assertFalse(mock.called)
 
     def test_body_contains_no_allocation_pools(self):
         result = create_default.filter_factory({})(self.app)
@@ -159,10 +163,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
 
 class TestDefaultIPV6Policy(DefaultPolicyTestBase):
     def setUp(self):
-        self.app = mock.Mock()
-
-        self.default_mock = mock.Mock()
-        self.mod_mock = mock.Mock()
+        super(TestDefaultIPV6Policy, self).setUp()
 
         self.v6_no_alloc = ('{ "subnets":[' +
                             '{' +
@@ -207,41 +208,6 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
                             ']' +
                             '}' +
                             '] }')
-
-    def test_default_instance_create(self):
-        result = create_default.filter_factory({})(self.app)
-        self.assertIsNotNone(result)
-        resp = result.__call__.request('/', method='GET')
-        self.assertEqual(resp, self.app)
-
-    def test_matched_configured(self):
-        conf = {'resource': 'POST /derp'}
-        result = create_default.filter_factory(conf)(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/derp', method='POST')
-            self.assertTrue(mock.called)
-
-    def test_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/v2.0/subnets', method='POST')
-            self.assertTrue(mock.called)
-
-    def test_not_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/v2.0/subnets', method='GET')
-            self.assertFalse(mock.called)
-
-    def test_not_matched(self):
-        result = create_default.filter_factory({})(self.app)
-        pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
-        with patch(pkg + '._filter_policy', self.default_mock) as mock:
-            result.__call__.request('/testing', method='POST')
-            self.assertFalse(mock.called)
 
     def test_body_contains_no_allocation_pools(self):
         result = create_default.filter_factory({})(self.app)
