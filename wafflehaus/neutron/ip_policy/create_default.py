@@ -73,13 +73,15 @@ class DefaultIPPolicy(object):
         default_end = netaddr.IPAddress(default_alloc_pools[0]["end"])
         default_set = \
             netaddr.IPSet(netaddr.IPRange(default_start, default_end).cidrs())
+        final_set = netaddr.IPSet()
         for p in alloc_pools:
             start = netaddr.IPAddress(p["start"])
             end = netaddr.IPAddress(p["end"])
-            default_set &= netaddr.IPSet(
+            alloc_pool_ip_set = netaddr.IPSet(
                 netaddr.IPRange(
                     netaddr.IPAddress(start), netaddr.IPAddress(end)).cidrs())
-        alloc_pools = self._pools_from_ipset(default_set)
+            final_set.update(default_set & alloc_pool_ip_set)
+        alloc_pools = self._pools_from_ipset(final_set)
         return alloc_pools
 
     def _filter_policy(self, req):
