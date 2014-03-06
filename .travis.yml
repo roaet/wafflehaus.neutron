@@ -5,6 +5,6 @@ python:
 install:
   - pip install -r requirements.txt -r test-requirements.txt . --use-mirrors
 before_script:
-  - "flake8 --show-source --builtins=_ wafflehaus.neutron"
+  - "flake8 --show-source --builtins=_ wafflehaus"
 script:
   - nosetests --with-coverage --cover-package=wafflehaus.neutron --cover-erase --cover-html --cover-html-dir=.coverage-report --cover-min-percentage=10
