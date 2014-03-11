@@ -91,9 +91,14 @@ class DefaultIPPolicy(object):
         except ValueError:
             return webob.exc.HTTPBadRequest
         subnets = body_json.get('subnets')
+        subnet = body_json.get('subnet')
         body_json["subnets"] = []
-        if subnets is None:
+        if subnets is None and subnet is None:
+            """If this is true there is nothing to work with let app error."""
             return self.app
+        if subnets is None:
+            """If this is true then it's a single, put it in list."""
+            subnets = [subnet]
         for subnet in subnets:
             alloc_pools = subnet.get('allocation_pools')
             if alloc_pools is None:
@@ -102,7 +107,8 @@ class DefaultIPPolicy(object):
                 alloc_pools = self._modify_allocation_pools(subnet)
             subnet["allocation_pools"] = alloc_pools
             body_json["subnets"].append(subnet)
-        self.body = json.dumps(body_json)
+        req.body = json.dumps(body_json)
+        self.body = req.body
         return self.app
 
     @webob.dec.wsgify
