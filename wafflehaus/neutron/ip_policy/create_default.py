@@ -12,23 +12,20 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 import json
-import logging
 import netaddr
 import webob.dec
 import webob.exc
 
+from wafflehaus.base import WafflehausBase
 import wafflehaus.resource_filter as rf
 
 
-class DefaultIPPolicy(object):
+class DefaultIPPolicy(WafflehausBase):
 
     def __init__(self, app, conf):
-        self.app = app
-        self.conf = conf
-        logname = __name__
-        self.log = logging.getLogger(conf.get('log_name', logname))
+        super(DefaultIPPolicy, self).__init__(app, conf)
+        self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus default ip policy middleware')
         self.testing = (conf.get('testing') in
                         (True, 'true', 't', '1', 'on', 'yes', 'y'))
