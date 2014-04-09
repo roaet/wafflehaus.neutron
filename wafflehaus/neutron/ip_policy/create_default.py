@@ -96,8 +96,10 @@ class DefaultIPPolicy(object):
         if subnets is None and subnet is None:
             """If this is true there is nothing to work with let app error."""
             return self.app
+        single = False
         if subnets is None:
             """If this is true then it's a single, put it in list."""
+            single = True
             subnets = [subnet]
         for subnet in subnets:
             alloc_pools = subnet.get('allocation_pools')
@@ -107,6 +109,8 @@ class DefaultIPPolicy(object):
                 alloc_pools = self._modify_allocation_pools(subnet)
             subnet["allocation_pools"] = alloc_pools
             body_json["subnets"].append(subnet)
+        if single:
+            body_json["subnet"] = body_json.pop("subnets")[0]
         req.body = json.dumps(body_json)
         self.body = req.body
         return self.app
