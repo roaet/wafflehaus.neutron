@@ -1,4 +1,2 @@
 dnspython
 webob
-neutron
--e git+https://github.com/roaet/wafflehaus.git#egg=wafflehaus
