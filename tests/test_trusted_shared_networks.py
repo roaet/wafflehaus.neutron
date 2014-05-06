@@ -43,8 +43,9 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
 
         self.app = FakeWebApp(response=self.create_response(0, 1, 0, 0))
 
-        self.trusted_conf = {"trusted": [self.trusted_id1]}
-        self.trusted_confs = {"trusted": [self.trusted_id1, self.trusted_id2]}
+        self.trusted_conf = {'enabled': 'true', "trusted": [self.trusted_id1]}
+        self.trusted_confs = {'enabled': 'true',
+                              "trusted": [self.trusted_id1, self.trusted_id2]}
 
         self.default_mock = mock.Mock()
 
@@ -116,7 +117,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
 
     def test_default_intance_create(self):
         self.app = FakeWebApp(response=self.create_response(0, 1, 0, 0))
-        result = trusted.filter_factory({})(self.app)
+        result = trusted.filter_factory({'enabled': 'true'})(self.app)
         self.assertIsNotNone(result)
 
     def test_do_not_modify_response_no_shared_nets(self):
@@ -125,7 +126,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
         self.assertEqual(1, len(app_networks))
         self.assertFalse(any(n.get('shared') for n in app_networks))
 
-        result = trusted.filter_factory({})(app)
+        result = trusted.filter_factory({'enabled': 'true'})(app)
         resp = result.__call__.request('/v2.0/networks?shared=true',
                                        method='GET')
 
@@ -205,7 +206,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
         self.assertEqual(2, len(app_networks))
         self.assertTrue(any(n.get('shared') for n in app_networks))
 
-        result = trusted.filter_factory({})(app)
+        result = trusted.filter_factory({'enabled': 'true'})(app)
         resp = result.__call__.request('/v2.0/networks?shared=true',
                                        method='GET')
 
@@ -221,7 +222,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
         self.assertEqual(2, len(app_networks))
         self.assertTrue(any(n.get('shared') for n in app_networks))
 
-        result = trusted.filter_factory({})(app)
+        result = trusted.filter_factory({'enabled': 'true'})(app)
         resp = result.__call__.request('/v2.0/networks?shared=true',
                                        method='GET',
                                        headers=self.headers_whitelist1)
@@ -347,7 +348,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
             self.assertFalse(mock.called)
 
     def test_do_call_on_correct_request(self):
-        result = trusted.filter_factory({})(self.app)
+        result = trusted.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.shared_network.trusted.TrustedSharedNetwork'
         with patch(pkg + '._sanitize_shared_nets', self.default_mock) as mock:
             result.__call__.request('/v2.0/networks?shared=true', method='GET')
@@ -360,7 +361,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
             self.assertTrue(mock.called)
 
     def test_do_not_filter_on_other_requests(self):
-        result = trusted.filter_factory({})(self.app)
+        result = trusted.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.shared_network.trusted.TrustedSharedNetwork'
         with patch(pkg + '._shared_nets_filter', self.default_mock) as mock:
             resp = result.__call__.request('/v2.0/networks', method='POST')
@@ -374,7 +375,7 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
         self.assertEqual(resp, self.app)
 
     def test_do_not_filter_unshared_requests(self):
-        result = trusted.filter_factory({})(self.app)
+        result = trusted.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.shared_network.trusted.TrustedSharedNetwork'
         with patch(pkg + '._sanitize_shared_nets', self.default_mock) as mock:
             resp = result.__call__.request('/v2.0/networks', method='GET')

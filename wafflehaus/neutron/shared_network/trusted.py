@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import webob.dec
 
 from wafflehaus.base import WafflehausBase
@@ -25,13 +24,11 @@ class TrustedSharedNetwork(WafflehausBase):
     def __init__(self, app, conf):
         super(TrustedSharedNetwork, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
-        self.log.info('Starting wafflehaus trusted shared nets  middleware')
-        self.testing = (conf.get('testing') in
-                        (True, 'true', 't', '1', 'on', 'yes', 'y'))
+        self.log.info('Starting wafflehaus trusted shared nets middleware')
         self.resource = conf.get('resource', 'GET /v2.0/networks{.format}')
         self.resources = rf.parse_resources(self.resource)
 
-        self.trusted_nets = conf.get('trusted', [])
+        self.trusted_nets = set(conf.get('trusted', []))
 
     def _shared_nets_filter(self, req):
         if "shared" not in req.GET:
@@ -41,40 +38,34 @@ class TrustedSharedNetwork(WafflehausBase):
     def _sanitize_shared_nets(self, req):
         headers = req.headers
         response = req.get_response(self.app)
-        body_json = json.loads(response.body)
-        networks = body_json.get("networks")
-        deleted_networks = []
+        body = response.json
+        networks = body.get('networks')
 
-        whitelist = headers.get('X_NETWORK_WHITELIST', None)
-        if whitelist is None:
-            whitelist = []
-        else:
-            whitelist = whitelist.split(',')
+        whitelist = set(headers.get('X_NETWORK_WHITELIST', '').split(','))
+        blacklist = set(headers.get('X_NETWORK_BLACKLIST', '').split(','))
 
-        blacklist = headers.get('X_NETWORK_BLACKLIST', None)
-        if blacklist is None:
-            blacklist = []
-        else:
-            blacklist = blacklist.split(',')
+        # Collect the shared network ids
+        shared_nets = set(n['id'] for n in networks if n['shared'])
 
-        for net in networks:
-            id = net.get('id')
-            if id in blacklist:
-                deleted_networks.append(net)
-            elif id in self.trusted_nets:
-                continue
-            elif net.get('shared') is True and id not in whitelist:
-                deleted_networks.append(net)
+        # Collect the unshared network ids
+        unshared_nets = set(n['id'] for n in networks if not n['shared'])
 
-        for del_net in deleted_networks:
-            networks.remove(del_net)
+        # Only allow configured or whitelisted shared networks
+        # But definitely remove blacklisted networks
+        okay_nets = set(n for n in shared_nets if n in
+                        whitelist.union(self.trusted_nets) - blacklist)
 
-        response.body = json.dumps(body_json)
+        # Use the networks that are either ok or unshared
+        body['networks'] = [n for n in networks if n['id'] in
+                            okay_nets.union(unshared_nets)]
+        response.json = body
 
         return response
 
     @webob.dec.wsgify
     def __call__(self, req):
+        if not self.enabled:
+            return self.app
         if self.testing or not rf.matched_request(req, self.resources):
             return self.app
         return self._shared_nets_filter(req)
