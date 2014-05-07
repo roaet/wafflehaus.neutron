@@ -27,8 +27,6 @@ class DefaultIPPolicy(WafflehausBase):
         super(DefaultIPPolicy, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus default ip policy middleware')
-        self.testing = (conf.get('testing') in
-                        (True, 'true', 't', '1', 'on', 'yes', 'y'))
         self.resource = conf.get('resource', 'POST /v2.0/subnets')
         self.resources = rf.parse_resources(self.resource)
 
@@ -114,6 +112,9 @@ class DefaultIPPolicy(WafflehausBase):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        if not self.enabled:
+            return self.app
+
         if not rf.matched_request(req, self.resources):
             return self.app
         return self._filter_policy(req)

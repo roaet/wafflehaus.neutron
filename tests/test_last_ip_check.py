@@ -49,7 +49,7 @@ class TestLastIpCheck(test_base.TestBase):
         self.return_value = 'app'
         self.app.return_value = self.return_value
         self.start_response = mock.Mock()
-        self.global_conf = {}
+        self.global_conf = {'enabled': 'true'}
         self.checker = last_ip_check.filter_factory(self.global_conf)(self.app)
 
         self.good_empty = self._create_body([])

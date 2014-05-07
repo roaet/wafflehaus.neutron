@@ -72,6 +72,9 @@ class LastIpCheck(WafflehausBase):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        if not self.enabled:
+            return self.app
+
         res = self._should_run(req)
         if isinstance(res, webob.exc.HTTPException):
             return res
