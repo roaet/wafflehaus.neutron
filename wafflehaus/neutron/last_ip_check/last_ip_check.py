@@ -12,19 +12,18 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 import json
-import logging
 import netaddr
 import webob.dec
 import webob.exc
 
+from wafflehaus.base import WafflehausBase
 
-class LastIpCheck(object):
+
+class LastIpCheck(WafflehausBase):
     def __init__(self, app, conf):
-        self.conf = conf
-        self.app = app
-        self.log = logging.getLogger(conf.get('log_name', __name__))
+        super(LastIpCheck, self).__init__(app, conf)
+        self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus last_ip_check middleware')
 
     def _check_basics(self, req):
@@ -73,6 +72,9 @@ class LastIpCheck(object):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        if not self.enabled:
+            return self.app
+
         res = self._should_run(req)
         if isinstance(res, webob.exc.HTTPException):
             return res

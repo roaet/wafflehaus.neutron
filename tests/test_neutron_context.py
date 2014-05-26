@@ -31,12 +31,15 @@ class TestNeutronContext(test_base.TestBase):
         self.req = {'REQUEST_METHOD': 'HEAD',
                     'X_USER_ID': '12345', }
 
-        self.local_conf = {"context_class": self.test_cls,
+        self.local_conf = {"context_class": self.test_cls, 'enabled': 'true',
                            "context_key": "context.test", }
 
-        self.strat_neutron = {"context_strategy": self.neutron_cls}
-        self.strat_none = {"context_strategy": "none"}
-        self.strat_test = {"context_strategy": "test"}
+        self.strat_neutron = {"context_strategy": self.neutron_cls,
+                              'enabled': 'true'}
+        self.strat_none = {"context_strategy": "none",
+                           'enabled': 'true'}
+        self.strat_test = {"context_strategy": "test",
+                           'enabled': 'true'}
         self.get_admin_mock = mock.Mock()
         self.get_admin_mock.return_value = ['admin']
 

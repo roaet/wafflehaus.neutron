@@ -32,13 +32,13 @@ class DefaultPolicyTestBase(test_base.TestBase):
         return allocation_pools
     
     def test_default_instance_create(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         self.assertIsNotNone(result)
         resp = result.__call__.request('/', method='GET')
         self.assertEqual(resp, self.app)
 
     def test_matched_configured(self):
-        conf = {'resource': 'POST /derp'}
+        conf = {'enabled': 'true', 'resource': 'POST /derp'}
         result = create_default.filter_factory(conf)(self.app)
         pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
         with patch(pkg + '._filter_policy', self.default_mock) as mock:
@@ -46,21 +46,21 @@ class DefaultPolicyTestBase(test_base.TestBase):
             self.assertTrue(mock.called)
 
     def test_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
         with patch(pkg + '._filter_policy', self.default_mock) as mock:
             result.__call__.request('/v2.0/subnets', method='POST')
             self.assertTrue(mock.called)
 
     def test_not_matched_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
         with patch(pkg + '._filter_policy', self.default_mock) as mock:
             result.__call__.request('/v2.0/subnets', method='GET')
             self.assertFalse(mock.called)
 
     def test_not_matched(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         pkg = 'wafflehaus.neutron.ip_policy.create_default.DefaultIPPolicy'
         with patch(pkg + '._filter_policy', self.default_mock) as mock:
             result.__call__.request('/testing', method='POST')
@@ -129,7 +129,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
                             '] }')
 
     def test_body_contains_no_allocation_pools(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v4_no_alloc
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -141,7 +141,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
         self.assertEqual("192.168.199.254", allocation_pools[0]["end"])
     
     def test_body_contains_allocation_pools_same_as_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v4_has_alloc_same_as_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -153,7 +153,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
         self.assertEqual("192.168.199.254", allocation_pools[0]["end"])
     
     def test_body_contains_allocation_pool_bigger_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v4_has_alloc_bigger_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -165,7 +165,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
         self.assertEqual("192.168.199.254", allocation_pools[0]["end"])
 
     def test_body_contains_allocation_pool_smaller_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v4_has_alloc_smaller_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -177,7 +177,7 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
         self.assertEqual("192.168.199.100", allocation_pools[0]["end"])
 
     def test_body_contains_multiple_allocation_pool_smaller_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v4_has_alloc_multiple_smaller_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -240,7 +240,7 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
                             ']' +
                             '}' +
                             '] }')
-        
+
         self.v6_has_alloc_multiple_smaller_than_default = ('{ "subnets":[' +
                             '{' +
                             '"cidr":"2607:f0d0:1002:51::0/96",' +
@@ -256,7 +256,7 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
                             '] }')
 
     def test_body_contains_no_allocation_pools(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v6_no_alloc
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -267,9 +267,9 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
         self.assertEqual("2607:f0d0:1002:51::a", allocation_pools[0]["start"])
         self.assertEqual("2607:f0d0:1002:51::ffff:fffe",
                          allocation_pools[0]["end"])
-    
+
     def test_body_contains_allocation_pools_same_as_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v6_has_alloc_same_as_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -280,9 +280,9 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
         self.assertEqual("2607:f0d0:1002:51::a", allocation_pools[0]["start"])
         self.assertEqual("2607:f0d0:1002:51::ffff:fffe",
                          allocation_pools[0]["end"])
-    
+
     def test_body_contains_allocation_pool_bigger_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v6_has_alloc_bigger_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -295,7 +295,7 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
                          allocation_pools[0]["end"])
 
     def test_body_contains_allocation_pool_smaller_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v6_has_alloc_smaller_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)
@@ -306,9 +306,9 @@ class TestDefaultIPV6Policy(DefaultPolicyTestBase):
         self.assertEqual("2607:f0d0:1002:51::55", allocation_pools[0]["start"])
         self.assertEqual("2607:f0d0:1002:51::64",
                          allocation_pools[0]["end"])
-    
+
     def test_body_contains_multiple_allocation_pool_smaller_than_default(self):
-        result = create_default.filter_factory({})(self.app)
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
         body = self.v6_has_alloc_smaller_than_default
         resp = result.__call__.request('/v2.0/subnets', method='POST',
                                        body=body)

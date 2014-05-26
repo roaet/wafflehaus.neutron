@@ -8,4 +8,4 @@ nose
 unittest2
 hacking
 -e git+https://github.com/openstack/neutron.git#egg=neutron
--e git+https://github.com/roaet/wafflehaus.git@9.2#egg=wafflehaus
+-e git+https://github.com/roaet/wafflehaus.git#egg=wafflehaus
