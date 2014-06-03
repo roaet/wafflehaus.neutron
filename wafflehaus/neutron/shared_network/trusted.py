@@ -28,7 +28,10 @@ class TrustedSharedNetwork(WafflehausBase):
         self.resource = conf.get('resource', 'GET /v2.0/networks{.format}')
         self.resources = rf.parse_resources(self.resource)
 
-        self.trusted_nets = set(conf.get('trusted', []))
+        self.trusted_nets = conf.get('trusted', '')
+        if isinstance(self.trusted_nets, basestring):
+            self.trusted_nets = self.trusted_nets.split()
+        self.trusted_nets = set(self.trusted_nets)
 
     def _shared_nets_filter(self, req):
         if "shared" not in req.GET:

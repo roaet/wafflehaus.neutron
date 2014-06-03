@@ -45,7 +45,8 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
 
         self.trusted_conf = {'enabled': 'true', "trusted": [self.trusted_id1]}
         self.trusted_confs = {'enabled': 'true',
-                              "trusted": [self.trusted_id1, self.trusted_id2]}
+                              "trusted": "%s %s" % (self.trusted_id1,
+                                                    self.trusted_id2)}
 
         self.default_mock = mock.Mock()
 
