@@ -28,7 +28,7 @@ Example Configuration
 ::
 
     [filter:trusted_shared_nets]
-    paste.filter_factory = wafflehaus.neutron.shared_nets.trusted:filter_factory
+    paste.filter_factory = wafflehaus.neutron.shared_network.trusted:filter_factory
     trusted = 00000000-0000-0000-0000-000000000000
               11111111-1111-1111-1111-111111111111 
     enabled = true
