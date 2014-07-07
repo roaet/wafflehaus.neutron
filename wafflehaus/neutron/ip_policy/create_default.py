@@ -12,7 +12,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import json
+
 import netaddr
 import webob.dec
 import webob.exc
@@ -66,8 +68,8 @@ class DefaultIPPolicy(WafflehausBase):
         default_alloc_pools = self._get_default_allocation_pools(subnet)
         default_start = netaddr.IPAddress(default_alloc_pools[0]["start"])
         default_end = netaddr.IPAddress(default_alloc_pools[0]["end"])
-        default_set = \
-            netaddr.IPSet(netaddr.IPRange(default_start, default_end).cidrs())
+        default_set = netaddr.IPSet(netaddr.IPRange(default_start,
+                                                    default_end).cidrs())
         final_set = netaddr.IPSet()
         for p in alloc_pools:
             start = netaddr.IPAddress(p["start"])
