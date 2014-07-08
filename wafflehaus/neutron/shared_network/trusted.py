@@ -67,6 +67,7 @@ class TrustedSharedNetwork(WafflehausBase):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        super(TrustedSharedNetwork, self).__call__(req)
         if not self.enabled:
             return self.app
         if self.testing or not rf.matched_request(req, self.resources):

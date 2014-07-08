@@ -114,6 +114,7 @@ class DefaultIPPolicy(WafflehausBase):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        super(DefaultIPPolicy, self).__call__(req)
         if not self.enabled:
             return self.app
 

@@ -16,7 +16,7 @@
 #    under the License.
 import setuptools
 
-version = '0.1'
+version = '0.1.1'
 
 setuptools.setup(
     name='wafflehaus.neutron',
