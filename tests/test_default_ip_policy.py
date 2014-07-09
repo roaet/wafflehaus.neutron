@@ -18,8 +18,10 @@ from mock import patch
 from tests import test_base
 
 from wafflehaus.neutron.ip_policy import create_default
+from wafflehaus import tests
 
-class DefaultPolicyTestBase(test_base.TestBase):
+
+class DefaultPolicyTestBase(tests.TestCase):
     def setUp(self):
         self.app = mock.Mock()
 
@@ -191,6 +193,24 @@ class TestDefaultIPV4Policy(DefaultPolicyTestBase):
         self.assertTrue(allocation_pools[0]["end"] in ending_ips)
         self.assertTrue(allocation_pools[1]["start"] in starting_ips)
         self.assertTrue(allocation_pools[1]["end"] in ending_ips)
+
+    def test_runtime_override(self):
+        self.set_reconfigure()
+        result = create_default.filter_factory({'enabled': 'true'})(self.app)
+
+        headers = {'X_WAFFLEHAUS_DEFAULTIPPOLICY_ENABLED': False}
+        body = self.v4_has_alloc_multiple_smaller_than_default
+        resp = result.__call__.request('/v2.0/subnets', method='POST',
+                                       body=body, headers=headers)
+        self.assertTrue(200, resp.status_code)
+        self.assertFalse(hasattr(result, 'body'))
+
+        headers = {'X_WAFFLEHAUS_DEFAULTIPPOLICY_ENABLED': True}
+        body = self.v4_has_alloc_multiple_smaller_than_default
+        resp = result.__call__.request('/v2.0/subnets', method='POST',
+                                       body=body, headers=headers)
+        self.assertTrue(200, resp.status_code)
+        self.assertNotEqual(result.body, body)
 
 
 class TestDefaultIPV6Policy(DefaultPolicyTestBase):

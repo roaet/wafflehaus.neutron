@@ -16,11 +16,11 @@ import json
 import mock
 from mock import patch
 import uuid
-from tests import test_base
 import webob.dec
 import webob.response
 
 from wafflehaus.neutron.shared_network import trusted
+from wafflehaus import tests
 
 
 class FakeWebApp(object):
@@ -33,7 +33,7 @@ class FakeWebApp(object):
         return self.response
 
 
-class TestTrustedSharedNetworksFilter(test_base.TestBase):
+class TestTrustedSharedNetworksFilter(tests.TestCase):
 
     def setUp(self):
         self.trusted_id1 = "0000"
@@ -382,3 +382,20 @@ class TestTrustedSharedNetworksFilter(test_base.TestBase):
             resp = result.__call__.request('/v2.0/networks', method='GET')
             self.assertFalse(mock.called)
         self.assertEqual(resp, self.app)
+
+    def test_runtime_override(self):
+        self.set_reconfigure()
+        result = trusted.filter_factory({'enabled': 'true'})(self.app)
+        headers = {'X_WAFFLEHAUS_TRUSTEDSHAREDNETWORK_ENABLED': False}
+
+        pkg = 'wafflehaus.neutron.shared_network.trusted.TrustedSharedNetwork'
+        with patch(pkg + '._sanitize_shared_nets', self.default_mock) as mock:
+            result.__call__.request('/v2.0/networks?shared=true', method='GET',
+                                    headers=headers)
+            self.assertFalse(mock.called)
+            result.__call__.request('/v2.0/networks.json?shared=true',
+                                    method='GET', headers=headers)
+            self.assertFalse(mock.called)
+            result.__call__.request('/v2.0/networks.xml?shared=true',
+                                    method='GET', headers=headers)
+            self.assertFalse(mock.called)

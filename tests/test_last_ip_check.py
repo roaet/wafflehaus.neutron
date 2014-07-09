@@ -16,12 +16,12 @@
 #from neutron import wsgi
 #from wafflehaus import rolerouter
 import mock
-from tests import test_base
+from wafflehaus import tests
 
 from wafflehaus.neutron.last_ip_check import last_ip_check
 
 
-class TestLastIpCheck(test_base.TestBase):
+class TestLastIpCheck(tests.TestCase):
     def _create_body(self, fixed_ips, resource='port', sub='fixed_ips'):
         res = '{"%s": {"%s": [%s]}}' % (resource, sub, ','.join(fixed_ips))
         return res
@@ -107,3 +107,15 @@ class TestLastIpCheck(test_base.TestBase):
         resp = self.checker.__call__.request('/ports/1234', method='PUT',
                                              body=self.good_only_v6)
         self.assertEqual(403, resp.status_code)
+
+    def test_runtime_override(self):
+        self.set_reconfigure()
+        result = last_ip_check.filter_factory(self.global_conf)(self.app)
+        resp = result.__call__.request('/ports/1234', method='PUT',
+                                       body=self.good_only_v6)
+        self.assertEqual(403, resp.status_code)
+        headers = {'X_WAFFLEHAUS_LASTIPCHECK_ENABLED': False}
+        resp = result.__call__.request('/ports/1234', method='PUT',
+                                       headers=headers,
+                                       body=self.good_only_v6)
+        self.assertEqual(self.app, resp)

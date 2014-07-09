@@ -12,10 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import unittest2
+from wafflehaus import tests
 
 
-class TestBase(unittest2.TestCase):
+class TestBase(tests.TestCase):
     '''Class to decide which unit test class to inherit from uniformly.'''
 
     def setUp(self):
