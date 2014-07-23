@@ -15,6 +15,7 @@
 import mock
 from mock import patch
 from wafflehaus.try_context import context_filter
+import webob.exc
 from tests import test_base
 
 
@@ -36,6 +37,9 @@ class TestNeutronContext(test_base.TestBase):
 
         self.strat_neutron = {"context_strategy": self.neutron_cls,
                               'enabled': 'true'}
+        self.strat_neutron_a = {"context_strategy": self.neutron_cls,
+                                'enabled': 'true',
+                                'require_auth_info': 'true'}
         self.strat_none = {"context_strategy": "none",
                            'enabled': 'true'}
         self.strat_test = {"context_strategy": "test",
@@ -123,6 +127,8 @@ class TestNeutronContext(test_base.TestBase):
         self.assertTrue(hasattr(context, 'roles'))
         self.assertTrue('testrole' in context.roles)
         self.assertTrue('testrole2' in context.roles)
+        self.assertTrue('admin' in context.roles)
+        self.assertEqual(3, len(context.roles))
 
     def test_create_strategy_neutron_appends_to_admin_role(self):
         result = context_filter.filter_factory(self.strat_neutron)(self.app)
@@ -138,7 +144,60 @@ class TestNeutronContext(test_base.TestBase):
         self.assertTrue(hasattr(context, 'roles'))
         self.assertTrue('testrole' in context.roles)
         self.assertTrue('testrole2' in context.roles)
-        set_a = set(['testrole', 'testrole2'])
-        set_b = set(context.roles)
-        set_result = set_b - set_a
-        self.assertTrue(set_a not in set_result)
+        self.assertTrue('admin' in context.roles)
+        self.assertEqual(3, len(context.roles))
+
+    def test_requires_auth_will_fail_without_info(self):
+        result = context_filter.filter_factory(self.strat_neutron_a)(self.app)
+        self.assertIsNotNone(result)
+        self.assertFalse('neutron.context' in self.req)
+        headers = {'Content-Type': 'application/json',
+                   'X_ROLES': 'testrole, testrole2', }
+        with patch('neutron.policy.get_admin_roles',
+                   self.get_admin_mock):
+            resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertTrue(isinstance(resp, webob.exc.HTTPForbidden))
+
+    def test_requires_auth_is_admin(self):
+        result = context_filter.filter_factory(self.strat_neutron_a)(self.app)
+        self.assertIsNotNone(result)
+        self.assertFalse('neutron.context' in self.req)
+        headers = {'Content-Type': 'application/json',
+                   'X_TENANT_ID': '123456',
+                   'X_USER_NAME': 'foo',
+                   'X_ROLES': 'testrole, testrole2', }
+        policy_check = self.create_patch('neutron.policy.check_is_admin')
+        policy_check.return_value = True
+        with patch('neutron.policy.get_admin_roles',
+                   self.get_admin_mock):
+            resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertEqual(self.app, resp)
+        self.assertEqual(1, policy_check.call_count)
+        context = result.strat_instance.context
+        self.assertTrue(hasattr(context, 'roles'))
+        self.assertTrue('testrole' in context.roles)
+        self.assertTrue('testrole2' in context.roles)
+        self.assertTrue(context.is_admin)
+        self.assertEqual(2, len(context.roles))
+
+    def test_requires_auth_is_not_admin(self):
+        result = context_filter.filter_factory(self.strat_neutron_a)(self.app)
+        self.assertIsNotNone(result)
+        self.assertFalse('neutron.context' in self.req)
+        headers = {'Content-Type': 'application/json',
+                   'X_TENANT_ID': '123456',
+                   'X_USER_NAME': 'foo',
+                   'X_ROLES': 'testrole, testrole2', }
+        policy_check = self.create_patch('neutron.policy.check_is_admin')
+        policy_check.return_value = False
+        with patch('neutron.policy.get_admin_roles',
+                   self.get_admin_mock):
+            resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertEqual(self.app, resp)
+        self.assertEqual(1, policy_check.call_count)
+        context = result.strat_instance.context
+        self.assertTrue(hasattr(context, 'roles'))
+        self.assertTrue('testrole' in context.roles)
+        self.assertTrue('testrole2' in context.roles)
+        self.assertFalse(context.is_admin)
+        self.assertEqual(2, len(context.roles))
