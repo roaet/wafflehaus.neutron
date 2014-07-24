@@ -19,8 +19,8 @@ from wafflehaus.try_context.context_filter import BaseContextStrategy
 
 
 class NeutronContextFilter(BaseContextStrategy):
-    def __init__(self, key):
-        super(NeutronContextFilter, self).__init__(key)
+    def __init__(self, key, req_auth=False):
+        super(NeutronContextFilter, self).__init__(key, req_auth)
         self.neutron_ctx = context
 
     def _process_roles(self, roles):
@@ -35,7 +35,16 @@ class NeutronContextFilter(BaseContextStrategy):
 
     def load_context(self, req):
         super(NeutronContextFilter, self).load_context(req)
-        ctx = self.neutron_ctx.get_admin_context()
+        tenant_id = req.headers.get('X_TENANT_ID')
+        user_id = req.headers.get('X_USER_NAME')
+        if tenant_id is None or user_id is None:
+            if self.require_auth_info:
+                return False
+            ctx = self.neutron_ctx.get_admin_context()
+        else:
+            ctx = self.neutron_ctx.Context(user_id=user_id,
+                                           tenant_id=tenant_id)
         self.context = ctx
         self._process_roles(req.headers.get('X_ROLES', ''))
         req.environ['neutron.context'] = self.context
+        return True
