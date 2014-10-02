@@ -18,13 +18,13 @@ import json
 import webob
 
 from tests import test_base
-from wafflehaus.neutron import nova_callback
+from wafflehaus.neutron import nova_interaction
 
 
-class TestNovaCallback(test_base.TestBase):
+class TestNovaInteraction(test_base.TestBase):
     def setUp(self):
-        super(TestNovaCallback, self).setUp()
-        self.app = self._fake_app
+        super(TestNovaInteraction, self).setUp()
+        self.app = self.fake_app
         self.body = {'port':
                      {'mac_address': "AA:BB:CC:DD:EE",
                       'fixed_ips': "ips_fixed",
@@ -54,11 +54,11 @@ class TestNovaCallback(test_base.TestBase):
                                   'tenant_id': "id_tenant"}})
 
     @webob.dec.wsgify
-    def _fake_app(self, req):
+    def fake_app(self, req):
         return webob.Response(body=json.dumps(self.body), status=200)
 
-    def _fake_response(self, req, fail=None):
-        resp = self._fake_app(req)
+    def fake_response(self, req, fail=None):
+        resp = self.fake_app(req)
         new_body = resp.json
         if fail is None:
             if req.method.upper() == "DELETE":
@@ -85,24 +85,24 @@ class TestNovaCallback(test_base.TestBase):
         return resp
 
     def test_filter_creation(self):
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
 
         self.assertIsNotNone(test_filter)
-        self.assertIsInstance(test_filter, nova_callback.NovaCallback)
+        self.assertIsInstance(test_filter, nova_interaction.NovaInteraction)
         self.assertTrue(callable(test_filter))
 
     def test_disabled_filter(self):
         conf = {"enabled": "false"}
-        test_filter = nova_callback.filter_factory(conf)(self.app)
+        test_filter = nova_interaction.filter_factory(conf)(self.app)
         resp = test_filter(webob.Request.blank("/v2/ports", method="POST"))
 
         self.assertEqual(resp, self.app)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_get_to_ports(self, mock_neutron, mock_nova):
         """This should look exactly like disabled_filter (we ignore GETs)."""
-        test_filter = nova_callback.filter_factory(self.conf)(self.app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.app)
         resp = test_filter(webob.Request.blank("/v2/ports/random_port_id",
                                                method="GET"))
 
@@ -110,16 +110,16 @@ class TestNovaCallback(test_base.TestBase):
         self.assertFalse(mock_neutron.called)
         self.assertEqual(resp, self.app)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_post_to_ports(self, mock_neutron, mock_nova):
         mock_conn = mock.MagicMock()
         mock_conn.admin_virtual_interfaces.return_value = self.nova_response
         mock_nova.return_value = mock_conn
         req = webob.Request.blank("/v2/ports", method="POST")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req)
+        fake_resp = self.fake_response(req)
 
         self.assertFalse(mock_neutron.called)
         self.assertTrue(mock_nova.called)
@@ -127,16 +127,16 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, fake_resp.status_code)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_post_to_ports_fail_on_nova(self, mock_neutron, mock_nova):
         mock_conn = mock.MagicMock()
         mock_conn.admin_virtual_interfaces.return_value = (503, "ERROR!")
         mock_nova.return_value = mock_conn
         req = webob.Request.blank("/v2/ports", method="POST")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req, fail="nova")
+        fake_resp = self.fake_response(req, fail="nova")
 
         self.assertFalse(mock_neutron.called)
         self.assertTrue(mock_nova.called)
@@ -144,17 +144,17 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, 500)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_put_to_ports(self, mock_neutron, mock_nova):
         """This is identical to the POST call above, except with PUT."""
         mock_conn = mock.MagicMock()
         mock_conn.admin_virtual_interfaces.return_value = self.nova_response
         mock_nova.return_value = mock_conn
         req = webob.Request.blank("/v2/ports/random_port_id", method="PUT")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req)
+        fake_resp = self.fake_response(req)
 
         self.assertFalse(mock_neutron.called)
         self.assertTrue(mock_nova.called)
@@ -162,17 +162,17 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, fake_resp.status_code)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_put_to_ports_fail_on_nova(self, mock_neutron, mock_nova):
         """This is identical to the POST nova failure above, except PUT."""
         mock_conn = mock.MagicMock()
         mock_conn.admin_virtual_interfaces.return_value = (503, "ERROR!")
         mock_nova.return_value = mock_conn
         req = webob.Request.blank("/v2/ports/random_port_id", method="PUT")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req, fail="nova")
+        fake_resp = self.fake_response(req, fail="nova")
 
         self.assertFalse(mock_neutron.called)
         self.assertTrue(mock_nova.called)
@@ -180,8 +180,8 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, 500)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_delete_to_ports(self, mock_neutron, mock_nova):
         mock_neutron_conn = mock.MagicMock()
         mock_neutron_conn.ports.return_value = self.neutron_response
@@ -191,9 +191,9 @@ class TestNovaCallback(test_base.TestBase):
             self.nova_response)
         mock_nova.return_value = mock_nova_conn
         req = webob.Request.blank("/v2/ports/random_port_id", method="DELETE")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req)
+        fake_resp = self.fake_response(req)
 
         self.assertTrue(mock_neutron.called)
         self.assertTrue(mock_neutron_conn.ports.called)
@@ -202,8 +202,8 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, fake_resp.status_code)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_delete_to_ports_fail_on_neutron(self, mock_neutron, mock_nova):
         """Test DELETE to /ports failing on Neutron callback.
 
@@ -214,9 +214,9 @@ class TestNovaCallback(test_base.TestBase):
         mock_neutron_conn.ports.return_value = (503, "ERROR!")
         mock_neutron.return_value = mock_neutron_conn
         req = webob.Request.blank("/v2/ports/random_port_id", method="DELETE")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req, fail="neutron")
+        fake_resp = self.fake_response(req, fail="neutron")
 
         self.assertTrue(mock_neutron.called)
         self.assertTrue(mock_neutron_conn.ports.called)
@@ -224,8 +224,8 @@ class TestNovaCallback(test_base.TestBase):
         self.assertEqual(resp.json, fake_resp.json)
         self.assertEqual(resp.status_code, 500)
 
-    @mock.patch("wafflehaus.neutron.nova_callback.NovaConn")
-    @mock.patch("wafflehaus.neutron.nova_callback.NeutronConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NovaConn")
+    @mock.patch("wafflehaus.neutron.nova_interaction.NeutronConn")
     def test_delete_to_ports_fail_on_nova(self, mock_neutron, mock_nova):
         mock_neutron_conn = mock.MagicMock()
         mock_neutron_conn.ports.return_value = self.neutron_response
@@ -234,9 +234,9 @@ class TestNovaCallback(test_base.TestBase):
         mock_nova_conn.admin_virtual_interfaces.return_value = (502, "ERROR!")
         mock_nova.return_value = mock_nova_conn
         req = webob.Request.blank("/v2/ports/random_port_id", method="DELETE")
-        test_filter = nova_callback.filter_factory(self.conf)(self._fake_app)
+        test_filter = nova_interaction.filter_factory(self.conf)(self.fake_app)
         resp = test_filter(req)
-        fake_resp = self._fake_response(req, fail="nova")
+        fake_resp = self.fake_response(req, fail="nova")
 
         self.assertTrue(mock_neutron.called)
         self.assertTrue(mock_neutron_conn.ports.called)

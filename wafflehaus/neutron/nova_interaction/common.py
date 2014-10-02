@@ -73,18 +73,27 @@ class NovaConnection(BaseConnection):
 
        Example admin-virtual-interface call:
 
-       http://<nova>:8774/v2/<tenant_id>/servers/<instance id>/
+       https://<nova>:8774/v2/<tenant_id>/servers/<instance id>/
                           admin-virtual-interfaces/<port uuid>
 
        Payload:
 
-       {"virtual_interface":
+        {"virtual_interface":
            {"action":"delete",
             "network_id": "040e3576-2d44-4984-8578-d6b82f2a524f",
             "fixed_ips": [{"subnet_id": "",
                            "ip_address": ""}],
             "id": "7d154734-e669-4608-bef6-ad6f205c6891",
             "address": "BC:76:4E:11:59:5C"}}
+
+       Example os-virtual-interface call:
+
+       https://<nova>:8774/servers/<instance_id>/os-virtual-interfacesv2
+
+       Payload:
+
+        {"virtual_interface":
+            {"network_id": "<network_id>"}}
     """
 
     def __init__(self, log=None, port=None, url=None, verify_ssl=True):
@@ -95,16 +104,24 @@ class NovaConnection(BaseConnection):
                                  fixed_ips=None, network_id=None,
                                  port_id=None, tenant_id=None,
                                  instance_id=None):
-        body = {"vitural_interface":
+        body = {"virtual_interface":
                 {"action": action,
                  "address": address,
                  "fixed_ips": fixed_ips,
                  "id": port_id,
                  "network_id": network_id}}
-        url = "%s:%d/v2/%s/servers/%s/admin-virtual-interfaces/%s/" % (
-            self.url, self.port, tenant_id, instance_id, port_id)
+        url = "%s/v2/%s/servers/%s/admin-virtual-interfaces/%s/" % (
+            self.url, tenant_id, instance_id, port_id)
 
         status, nova_resp = self.put(url, body)
+        return status, nova_resp
+
+    def os_virtual_interfaces(self, network_id=None):
+
+        body = {"virtual_interface":
+                {"network_id": network_id}}
+
+        status, nova_resp = self.put(self.url, body)
         return status, nova_resp
 
 

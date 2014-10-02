@@ -19,16 +19,16 @@ from webob.dec import wsgify
 from webob import Response
 
 from wafflehaus.base import WafflehausBase
-from wafflehaus.neutron.nova_callback.common import (NeutronConnection as
-                                                     NeutronConn)
-from wafflehaus.neutron.nova_callback.common import (NovaConnection as
-                                                     NovaConn)
+from wafflehaus.neutron.nova_interaction.common import (NeutronConnection as
+                                                        NeutronConn)
+from wafflehaus.neutron.nova_interaction.common import (NovaConnection as
+                                                        NovaConn)
 import wafflehaus.resource_filter as rf
 
 
-class NovaCallback(WafflehausBase):
+class NovaInteraction(WafflehausBase):
     def __init__(self, app, conf):
-        super(NovaCallback, self).__init__(app, conf)
+        super(NovaInteraction, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus nova_callback middleware')
         self.neutron_port = conf.get('neutron_port')
@@ -132,7 +132,7 @@ class NovaCallback(WafflehausBase):
     @wsgify
     def __call__(self, req):
         """This returns an app if ignored or a response if processed."""
-        super(NovaCallback, self).__call__(req)
+        super(NovaInteraction, self).__call__(req)
         if not self.enabled:
             return self.app
         if rf.matched_request(req, self.resources):
@@ -152,6 +152,6 @@ def filter_factory(global_conf, **local_conf):
     conf.update(local_conf)
 
     def wrapper(app):
-        return NovaCallback(app, conf)
+        return NovaInteraction(app, conf)
 
     return wrapper
