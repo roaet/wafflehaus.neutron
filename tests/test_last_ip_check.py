@@ -15,16 +15,31 @@
 #import mock
 #from neutron import wsgi
 #from wafflehaus import rolerouter
-import mock
-from wafflehaus import tests
+import json
 
+import mock
+import webob
+
+from wafflehaus import tests
 from wafflehaus.neutron.last_ip_check import last_ip_check
 
 
 class TestLastIpCheck(tests.TestCase):
+    def _add_v4(self, subnet="ipv4"):
+        res = '{"subnet_id": "%s"}' % subnet
+        return res
+
+    def _add_v6(self, subnet="ipv6"):
+        res = '{"subnet_id": "%s"}' % subnet
+        return res
+
     def _create_body(self, fixed_ips, resource='port', sub='fixed_ips'):
         res = '{"%s": {"%s": [%s]}}' % (resource, sub, ','.join(fixed_ips))
         return res
+
+    @webob.dec.wsgify
+    def _fake_app(self, req, body=''):
+        return webob.Response(body=json.dumps(body), status=200)
 
     def _v4(self, subnet="ipv4"):
         res = '{"subnet_id": "%s", "ip_address": "10.13.20.64"}' % subnet
@@ -35,24 +50,13 @@ class TestLastIpCheck(tests.TestCase):
                subnet)
         return res
 
-    def _add_v4(self, subnet="ipv4"):
-        res = '{"subnet_id": "%s"}' % subnet
-        return res
-
-    def _add_v6(self, subnet="ipv6"):
-        res = '{"subnet_id": "%s"}' % subnet
-        return res
-
     def setUp(self):
         super(TestLastIpCheck, self).setUp()
-        self.app = mock.Mock()
-        self.return_value = 'app'
-        self.app.return_value = self.return_value
-        self.start_response = mock.Mock()
+        self.app = self._fake_app
         self.global_conf = {'enabled': 'true'}
         self.checker = last_ip_check.filter_factory(self.global_conf)(self.app)
 
-        self.good_empty = self._create_body([])
+        self.good_only_v4 = self._create_body([self._v4()])
         self.good_only_v6 = self._create_body([self._v6()])
         self.good_add_v4 = self._create_body([self._add_v4()])
         self.good_add_v6 = self._create_body([self._add_v6()])
@@ -63,6 +67,7 @@ class TestLastIpCheck(tests.TestCase):
 
         self.bad_resource = '{"derp": {"fixed_ips":[{"derp": "derp"}]}}'
         self.bad_no_fixed = '{"port": {"derply":[{"derp": "derp"}]}}'
+        self.empty_fixed_ips = '{"port": {"fixed_ips":[]}}'
 
     def test_create_ip_check(self):
         checker = last_ip_check.filter_factory(self.global_conf)(self.app)
@@ -97,25 +102,29 @@ class TestLastIpCheck(tests.TestCase):
                                              body=self.bad_resource)
         self.assertEqual(self.app, resp)
 
-    def test_call_correct_body(self):
-        resp = self.checker.__call__.request('/ports/1234', method='PUT',
-                                             body=self.good_empty)
+    def test_put_empty_fixed_ips(self):
+        resp = self.checker(webob.Request.blank('/ports/1234', method='PUT',
+                                                body=self.empty_fixed_ips))
         self.assertEqual(403, resp.status_code)
 
-    def test_only_v6(self):
-        """This situation occurs if any ip was removed and ipv6 is left."""
-        resp = self.checker.__call__.request('/ports/1234', method='PUT',
-                                             body=self.good_only_v6)
-        self.assertEqual(403, resp.status_code)
+    def test_put_only_v4(self):
+        resp = self.checker(webob.Request.blank('/ports/1234', method='PUT',
+                                                body=self.good_only_v4))
+        self.assertEqual(self.app, resp)
+
+    def test_put_only_v6(self):
+        resp = self.checker(webob.Request.blank('/ports/1234', method='PUT',
+                                                body=self.good_only_v6))
+        self.assertEqual(self.app, resp)
 
     def test_runtime_override(self):
         self.set_reconfigure()
         result = last_ip_check.filter_factory(self.global_conf)(self.app)
         resp = result.__call__.request('/ports/1234', method='PUT',
-                                       body=self.good_only_v6)
+                                       body=self.empty_fixed_ips)
         self.assertEqual(403, resp.status_code)
         headers = {'X_WAFFLEHAUS_LASTIPCHECK_ENABLED': False}
         resp = result.__call__.request('/ports/1234', method='PUT',
                                        headers=headers,
-                                       body=self.good_only_v6)
+                                       body=self.empty_fixed_ips)
         self.assertEqual(self.app, resp)

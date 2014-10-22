@@ -15,7 +15,6 @@
 
 import json
 
-import netaddr
 import webob.dec
 import webob.exc
 
@@ -62,14 +61,11 @@ class LastIpCheck(WafflehausBase):
         if not hasattr(self, 'fixed_ips') or self.fixed_ips is None:
             return self.app
         if len(self.fixed_ips) == 0:
-            return webob.exc.HTTPForbidden()
-        for fixed_ip in self.fixed_ips:
-            ip_str = fixed_ip.get('ip_address')
-            ip = netaddr.IPAddress(ip_str)
-            if ip.version == 4:
-                """If there is an ipv4 there, we're good"""
-                return self.app
-        self.log.error('Attempting to remove last ipv4')
+            self.log.error('PUT requests to remove all IPs from a Port '
+                           'are not allowed')
+            return webob.exc.HTTPForbidden("fixed_ips cannot be empty")
+        else:
+            return self.app
         return webob.exc.HTTPForbidden()
 
     @webob.dec.wsgify
