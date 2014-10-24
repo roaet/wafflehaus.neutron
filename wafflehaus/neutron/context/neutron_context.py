@@ -36,7 +36,7 @@ class NeutronContextFilter(BaseContextStrategy):
     def load_context(self, req):
         super(NeutronContextFilter, self).load_context(req)
         tenant_id = req.headers.get('X_TENANT_ID')
-        user_id = req.headers.get('X_USER_NAME')
+        user_id = req.headers.get('X_USER_ID')
         if tenant_id is None or user_id is None:
             if self.require_auth_info:
                 return False
