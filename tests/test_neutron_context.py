@@ -22,6 +22,17 @@ from tests import test_base
 class TestNeutronContext(test_base.TestBase):
     def setUp(self):
         super(TestNeutronContext, self).setUp()
+        find_policy_file_patch = mock.patch(
+            "neutron.common.utils.find_config_file")
+        read_policy_file_patch = mock.patch(
+            "neutron.common.utils.read_cached_file")
+        from neutron.openstack.common import policy
+        policy._rules = {}
+        find_policy_file_patch.start()
+        read_policy_file_patch.start()
+        self.addCleanup(find_policy_file_patch.stop)
+        self.addCleanup(read_policy_file_patch.stop)
+
         self.app = mock.Mock()
         self.app.return_value = "OK"
         self.start_response = mock.Mock()
@@ -164,7 +175,7 @@ class TestNeutronContext(test_base.TestBase):
         self.assertFalse('neutron.context' in self.req)
         headers = {'Content-Type': 'application/json',
                    'X_TENANT_ID': '123456',
-                   'X_USER_NAME': 'foo',
+                   'X_USER_ID': 'foo',
                    'X_ROLES': 'testrole, testrole2', }
         policy_check = self.create_patch('neutron.policy.check_is_admin')
         policy_check.return_value = True
@@ -186,7 +197,7 @@ class TestNeutronContext(test_base.TestBase):
         self.assertFalse('neutron.context' in self.req)
         headers = {'Content-Type': 'application/json',
                    'X_TENANT_ID': '123456',
-                   'X_USER_NAME': 'foo',
+                   'X_USER_ID': 'foo',
                    'X_ROLES': 'testrole, testrole2', }
         policy_check = self.create_patch('neutron.policy.check_is_admin')
         policy_check.return_value = False
