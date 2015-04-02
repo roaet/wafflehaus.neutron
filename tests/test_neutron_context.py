@@ -27,11 +27,17 @@ class TestNeutronContext(test_base.TestBase):
         read_policy_file_patch = mock.patch(
             "neutron.common.utils.read_cached_file")
         from neutron.openstack.common import policy
+
+        adv_svc = mock.patch(
+            "neutron.policy.check_is_advsvc")
+        adv_svc.return_value = False
         policy._rules = {}
         find_policy_file_patch.start()
         read_policy_file_patch.start()
+        adv_svc.start()
         self.addCleanup(find_policy_file_patch.stop)
         self.addCleanup(read_policy_file_patch.stop)
+        self.addCleanup(adv_svc.stop)
 
         self.app = mock.Mock()
         self.app.return_value = "OK"
