@@ -68,6 +68,7 @@ class TestLastIpCheck(tests.TestCase):
         self.bad_resource = '{"derp": {"fixed_ips":[{"derp": "derp"}]}}'
         self.bad_no_fixed = '{"port": {"derply":[{"derp": "derp"}]}}'
         self.empty_fixed_ips = '{"port": {"fixed_ips":[]}}'
+        self.true_body = 'true'
 
     def test_create_ip_check(self):
         checker = last_ip_check.filter_factory(self.global_conf)(self.app)
@@ -115,6 +116,11 @@ class TestLastIpCheck(tests.TestCase):
     def test_put_only_v6(self):
         resp = self.checker(webob.Request.blank('/ports/1234', method='PUT',
                                                 body=self.good_only_v6))
+        self.assertEqual(self.app, resp)
+
+    def test_put_body_true(self):
+        resp = self.checker(webob.Request.blank('/ports/1234', method='PUT',
+                                                body=self.true_body))
         self.assertEqual(self.app, resp)
 
     def test_runtime_override(self):
