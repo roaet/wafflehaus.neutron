@@ -48,7 +48,10 @@ class LastIpCheck(WafflehausBase):
             body_json = json.loads(body)
         except ValueError:
             return webob.exc.HTTPBadRequest
-        port_info = body_json.get('port')
+        try:
+            port_info = body_json.get('port')
+        except AttributeError:
+            return False
         if port_info is None:
             return False
         fixed_ips = port_info.get('fixed_ips')
