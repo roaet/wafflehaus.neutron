@@ -14,6 +14,7 @@
 #    under the License.
 
 from neutron import context
+from neutron import policy
 
 from wafflehaus.try_context.context_filter import BaseContextStrategy
 
@@ -46,5 +47,13 @@ class NeutronContextFilter(BaseContextStrategy):
                                            tenant_id=tenant_id)
         self.context = ctx
         self._process_roles(req.headers.get('X_ROLES', ''))
+
+        # By default, the normal neutron context will set is_advcsvc to True if
+        # it is an admin context.  This resets it to what the actual policy
+        # says it should be.  This must be done after _process_roles is called
+        # because the policy check relies on the roles.
+        # TODO(blogan): remove this if upstream changes the behavior
+        # of is_advsvc to only depend on the policy.
+        self.context.is_advsvc = policy.check_is_advsvc(self.context)
         req.environ['neutron.context'] = self.context
         return True

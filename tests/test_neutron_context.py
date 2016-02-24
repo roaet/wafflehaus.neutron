@@ -28,16 +28,13 @@ class TestNeutronContext(test_base.TestBase):
             "neutron.common.utils.read_cached_file")
         from neutron import policy
 
-        adv_svc = mock.patch(
+        adv_svc_patch = mock.patch(
             "neutron.policy.check_is_advsvc")
-        adv_svc.return_value = False
         policy._rules = {}
         find_policy_file_patch.start()
         read_policy_file_patch.start()
-        adv_svc.start()
-        self.addCleanup(find_policy_file_patch.stop)
-        self.addCleanup(read_policy_file_patch.stop)
-        self.addCleanup(adv_svc.stop)
+        self.adv_svc = adv_svc_patch.start()
+        self.adv_svc.return_value = False
 
         self.app = mock.Mock()
         self.app.return_value = "OK"
@@ -71,7 +68,7 @@ class TestNeutronContext(test_base.TestBase):
         self.assertFalse('neutron.context' in self.req)
         headers = {'Content-Type': 'application/json',
                    'X_USER_ID': 'derp', }
-        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        result.__call__.request('/', method='HEAD', headers=headers)
 
     def test_create_strategy_neutron_no_user(self):
         result = context_filter.filter_factory(self.strat_neutron)(self.app)
@@ -180,3 +177,26 @@ class TestNeutronContext(test_base.TestBase):
         self.assertTrue('testrole2' in context.roles)
         self.assertFalse(context.is_admin)
         self.assertEqual(2, len(context.roles))
+
+    def test_advsvc_is_false_when_admin_and_not_advsvc_role(self):
+        result = context_filter.filter_factory(self.strat_neutron)(self.app)
+        self.assertIsNotNone(result)
+        self.assertTrue(isinstance(result, context_filter.ContextFilter))
+        self.assertFalse('neutron.context' in self.req)
+        headers = {'Content-Type': 'application/json'}
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertEqual(self.app, resp)
+        context = result.strat_instance.context
+        self.assertFalse(context.is_advsvc)
+
+    def test_advsvc_is_true_when_policy_says_it_is(self):
+        self.adv_svc.return_value = True
+        result = context_filter.filter_factory(self.strat_neutron)(self.app)
+        self.assertIsNotNone(result)
+        self.assertTrue(isinstance(result, context_filter.ContextFilter))
+        self.assertFalse('neutron.context' in self.req)
+        headers = {'Content-Type': 'application/json'}
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertEqual(self.app, resp)
+        context = result.strat_instance.context
+        self.assertTrue(context.is_advsvc)
