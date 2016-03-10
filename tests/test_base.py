@@ -12,6 +12,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import mock
+
 from wafflehaus import tests
 
 
@@ -20,3 +23,5 @@ class TestBase(tests.TestCase):
 
     def setUp(self):
         super(TestBase, self).setUp()
+        # Stop all patchers so that we get a fresh patcher every test
+        self.addCleanup(mock.patch.stopall)
