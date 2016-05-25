@@ -41,7 +41,12 @@ class NeutronContextFilter(BaseContextStrategy):
         if tenant_id is None or user_id is None:
             if self.require_auth_info:
                 return False
-            ctx = self.neutron_ctx.get_admin_context()
+            # get_admin_context() does not provide a parameter to set
+            # overwrite=True
+            ctx = self.neutron_ctx.Context(user_id=None,
+                                           tenant_id=None,
+                                           is_admin=True,
+                                           overwrite=True)
         else:
             ctx = self.neutron_ctx.Context(user_id=user_id,
                                            tenant_id=tenant_id)
