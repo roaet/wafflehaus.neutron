@@ -14,6 +14,7 @@
 #    under the License.
 import mock
 from mock import patch
+from oslo_config import cfg
 from wafflehaus.try_context import context_filter
 import webob.exc
 from tests import test_base
@@ -23,16 +24,13 @@ class TestNeutronContext(test_base.TestBase):
     def setUp(self):
         super(TestNeutronContext, self).setUp()
         find_policy_file_patch = mock.patch(
-            "neutron.common.utils.find_config_file")
-        read_policy_file_patch = mock.patch(
-            "neutron.common.utils.read_cached_file")
+            "oslo_config.cfg.find_config_files")
         from neutron import policy
 
         adv_svc_patch = mock.patch(
             "neutron.policy.check_is_advsvc")
         policy._rules = {}
         find_policy_file_patch.start()
-        read_policy_file_patch.start()
         self.adv_svc = adv_svc_patch.start()
         self.adv_svc.return_value = False
 
