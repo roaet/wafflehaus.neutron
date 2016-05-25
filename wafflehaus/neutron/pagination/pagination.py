@@ -13,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-from urlparse import urlparse, urlunparse
+from urlparse import urlparse
+from urlparse import urlunparse
 
 from webob.dec import wsgify
-from webob import Response
 
 from wafflehaus.base import WafflehausBase
+
 
 class Pagination(WafflehausBase):
     def __init__(self, app, conf):
@@ -71,6 +71,7 @@ class Pagination(WafflehausBase):
         resp.json = pagination_json
 
         return resp
+
 
 def filter_factory(global_conf, **local_conf):
     """Returns a WSGI filter app for use with paste.deploy."""

@@ -1,2 +1,4 @@
+setuptools>=20.0.0
+pbr>=1.8.0
 dnspython
 webob
