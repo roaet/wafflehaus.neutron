@@ -60,5 +60,8 @@ class NeutronContextFilter(BaseContextStrategy):
         # TODO(blogan): remove this if upstream changes the behavior
         # of is_advsvc to only depend on the policy.
         self.context.is_advsvc = policy.check_is_advsvc(self.context)
+        # If not admin, check if current roles provide admin status.
+        if not self.context.is_admin:
+            self.context.is_admin = policy.check_is_admin(self.context)
         req.environ['neutron.context'] = self.context
         return True
