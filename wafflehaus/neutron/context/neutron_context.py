@@ -43,13 +43,16 @@ class NeutronContextFilter(BaseContextStrategy):
                 return False
             # get_admin_context() does not provide a parameter to set
             # overwrite=True
+            # set overwrite=True to avoid duplicate request-id's
             ctx = self.neutron_ctx.Context(user_id=None,
                                            tenant_id=None,
                                            is_admin=True,
                                            overwrite=True)
         else:
+            # set overwrite=True to avoid duplicate request-id's
             ctx = self.neutron_ctx.Context(user_id=user_id,
-                                           tenant_id=tenant_id)
+                                           tenant_id=tenant_id,
+                                           overwrite=True)
         self.context = ctx
         self._process_roles(req.headers.get('X_ROLES', ''))
 
