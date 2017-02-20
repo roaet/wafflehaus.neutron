@@ -49,7 +49,7 @@ class TestNeutronContext(test_base.TestBase):
         context = result.strat_instance.context
         self.assertTrue(context.is_admin)
 
-    def test_create_strategy_neutron_no_user(self):
+    def test_create_strategy_neutron_no_user_no_role(self):
         result = context_filter.filter_factory(self.strat_neutron)(self.app)
         self.assertIsNotNone(result)
         self.assertTrue(isinstance(result, context_filter.ContextFilter))
@@ -155,6 +155,45 @@ class TestNeutronContext(test_base.TestBase):
         self.assertTrue('testrole2' in context.roles)
         self.assertFalse(context.is_admin)
         self.assertEqual(2, len(context.roles))
+
+    def test_verify_non_duplicate_request_id_non_admin(self):
+        result = context_filter.filter_factory(self.strat_neutron_a)(self.app)
+        self.assertIsNotNone(result)
+        headers = {'Content-Type': 'application/json',
+                   'X_TENANT_ID': '123456',
+                   'X_USER_ID': 'foo',
+                   'X_ROLES': 'testrole, testrole2', }
+        policy_check = self.create_patch('neutron.policy.check_is_admin')
+        policy_check.return_value = False
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        self.assertEqual(self.app, resp)
+        self.assertEqual(2, policy_check.call_count)
+        context = result.strat_instance.context
+        self.assertTrue(hasattr(context, 'roles'))
+        self.assertTrue('testrole' in context.roles)
+        self.assertTrue('testrole2' in context.roles)
+        self.assertFalse(context.is_admin)
+        self.assertEqual(2, len(context.roles))
+        # Generate another call in order to force oslo.context to refresh
+        # the _request_store, which in turn generates a new request_id
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        context1 = result.strat_instance.context
+        self.assertNotEqual(context.request_id, context1.request_id)
+
+    def test_verify_non_duplicate_request_id_admin(self):
+        result = context_filter.filter_factory(self.strat_neutron)(self.app)
+        self.assertIsNotNone(result)
+        self.assertTrue(isinstance(result, context_filter.ContextFilter))
+        headers = {'Content-Type': 'application/json', }
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        context = result.strat_instance.context
+        self.assertTrue(context.is_admin)
+        self.assertEqual(self.app, resp)
+        # Generate another call in order to force oslo.context to refresh
+        # the _request_store, which in turn generates a new request_id
+        resp = result.__call__.request('/', method='HEAD', headers=headers)
+        context1 = result.strat_instance.context
+        self.assertNotEqual(context.request_id, context1.request_id)
 
     def test_is_not_admin_policy_check_true(self):
         result = context_filter.filter_factory(self.strat_neutron_a)(self.app)
