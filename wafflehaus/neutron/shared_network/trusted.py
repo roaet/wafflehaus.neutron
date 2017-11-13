@@ -24,7 +24,6 @@ class TrustedSharedNetwork(WafflehausBase):
     def __init__(self, app, conf):
         super(TrustedSharedNetwork, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
-        self.log.info('Starting wafflehaus trusted shared nets middleware')
         self.resource = conf.get('resource', 'GET /v2.0/networks{.format}')
         self.resources = rf.parse_resources(self.resource)
 
@@ -34,30 +33,57 @@ class TrustedSharedNetwork(WafflehausBase):
         self.trusted_nets = set(self.trusted_nets)
 
     def _shared_nets_filter(self, req):
+        tenant_id = req.headers.get('X_TENANT_ID')
+        user_id = req.headers.get('X_USER_ID')
         if "shared" not in req.GET:
+            self.log.info('Checking for shared nets filter. '
+                          'Shared not in get request '
+                          'tenant_id %s user_id %s' % (tenant_id, user_id))
             return self.app
         return self._sanitize_shared_nets(req)
 
     def _sanitize_shared_nets(self, req):
+        context_dict = req.environ.get('neutron.context')
+        if context_dict:
+            self.log.info('_check_basics, Neutron Context : ' +
+                          'request id %s, project id %s, '
+                          'tenant name %s, is admin %s, user id %s'
+                          % (str(context_dict.request_id),
+                             str(context_dict.project_id),
+                             str(context_dict.tenant_name),
+                             str(context_dict.is_admin),
+                             str(context_dict.user_id)))
+        tenant_id = req.headers.get('X_TENANT_ID')
+        user_id = req.headers.get('X_USER_ID')
+        self.log.info('_sanitize_shared_nets - '
+                      'Started sanitizing shared nets '
+                      'tenant_id %s user_id %s' % (tenant_id, user_id))
         headers = req.headers
         response = req.get_response(self.app)
         body = response.json
+        self.log.info('_sanitize_shared_nets - '
+                      'Shared IP request json body -> ' + str(body))
         networks = body.get('networks')
-
         whitelist = set(headers.get('X_NETWORK_WHITELIST', '').split(','))
         blacklist = set(headers.get('X_NETWORK_BLACKLIST', '').split(','))
 
         # Collect the shared network ids
         shared_nets = set(n['id'] for n in networks if n['shared'])
-
+        self.log.info('_sanitize_shared_nets - '
+                      'Shared nets %s for tenant_id %s and user_id %s' %
+                      (str(shared_nets), tenant_id, user_id))
         # Collect the unshared network ids
         unshared_nets = set(n['id'] for n in networks if not n['shared'])
-
+        self.log.info('_sanitize_shared_nets - '
+                      'Unshared nets %s for tenant_id %s and user_id %s' %
+                      (str(unshared_nets), tenant_id, user_id))
         # Only allow configured or whitelisted shared networks
         # But definitely remove blacklisted networks
         okay_nets = set(n for n in shared_nets if n in
                         whitelist.union(self.trusted_nets) - blacklist)
-
+        self.log.info('_sanitize_shared_nets - '
+                      'Okay nets %s for tenant_id %s and user_id %s' %
+                      (str('okay_nets'), tenant_id, user_id))
         # Use the networks that are either ok or unshared
         body['networks'] = [n for n in networks if n['id'] in
                             okay_nets.union(unshared_nets)]
