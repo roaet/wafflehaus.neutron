@@ -5,5 +5,5 @@ discover
 nose
 unittest2
 hacking
--e git+https://github.com/openstack/neutron.git#egg=neutron
+http://tarballs.openstack.org/neutron/neutron-10.0.0.tar.gz#egg=neutron
 -e git+https://github.com/roaet/wafflehaus.git#egg=wafflehaus
